@@ -2,131 +2,117 @@ import http from "http";
 import nodePath from "path";
 
 const expression = () => {
-	const endpoints = {
-		getHandlers: {},
-		postHandlers: {},
-		patchHandlers: {},
-		putHandlers: {},
-		deleteHandlers: {},
-	};
-	let globalPath = "/";
-	let middlewares = [];
+    const endpoints = {
+        GET: {},
+        POST: {},
+        PATCH: {},
+        PUT: {},
+        DELETE: {},
+        middlewares: {},
+    };
+    let globalPath = "/";
 
-	const parseUrl = (url, port) => {
-		const parsedUrl = new URL(`http://localhost:${port}${url}`);
-		return parsedUrl;
-	};
+    const parseUrl = (url, port) => {
+        const parsedUrl = new URL(`http://localhost:${port}${url}`);
+        return parsedUrl;
+    };
 
-	const getQuery = (url) => {
-		const query = {};
+    const getQuery = (url) => {
+        const query = {};
 
-		url.search
-			.slice(1)
-			.split("&")
-			.forEach((property) => {
-				const key = property.split("=")[0];
-				const value = property.split("=")[1];
+        url.search
+            .slice(1)
+            .split("&")
+            .forEach((property) => {
+                const key = property.split("=")[0];
+                const value = property.split("=")[1];
 
-				query[key] = value;
-			});
-		return query;
-	};
+                query[key] = value;
+            });
+        return query;
+    };
 
-	const handleEndpoint = (handler, url, req, res) => {
-		for (const path in endpoints[handler]) {
-			if (Object.hasOwnProperty.call(endpoints[handler], path)) {
-				if (url === path) {
-					const handlers = endpoints[handler][path];
+    const handleEndpoint = (endpoint, url, req, res) => {
+        for (const path in endpoints[endpoint]) {
+            if (Object.hasOwnProperty.call(endpoints[endpoint], path)) {
+                if (url === path) {
+                    const handler = endpoints[endpoint][path];
 
-					handlers[0](req, res, () => {
-						handlers[1](req, res);
-					});
-				}
-			}
-		}
-	};
+                    console.log("asd");
+                    handler(req, res);
+                }
+            }
+        }
+    };
 
-	return {
-		use(...args) {
-			if (typeof args[0] === "string" && typeof args[1] === "function") {
-			} else if (typeof args[0] === "string") {
-			} else if (typeof args[0] === "function") {
-			}
-		},
-		get(path = "/", ...handlers) {
-			endpoints.getHandlers[path] = handlers;
-		},
-		post(path = "/", ...handlers) {
-			endpoints.postHandlers[path] = handlers;
-		},
-		put(path = "/", ...handlers) {
-			endpoints.putHandlers[path] = handlers;
-		},
-		patch(path = "/", ...handlers) {
-			endpoints.patchHandlers[path] = handlers;
-		},
-		delete(path = "/", ...handlers) {
-			endpoints.deleteHandlers[path] = handlers;
-		},
-		listen(port, callback) {
-			const server = http.createServer((req, res) => {
-				const url = parseUrl(req.url, port);
+    return {
+        use(...args) {
+            if (typeof args[0] === "string" && typeof args[1] === "function") {
+            } else if (typeof args[0] === "string") {
+                const path = args[0];
 
-				req.query = getQuery(url);
+                if (globalPath === "/") {
+                    globalPath += path.slice(1);
+                } else {
+                    globalPath += path;
+                }
+            } else if (typeof args[0] === "function") {
+            } else {
+                console.error("Incorrect arguments");
+            }
+        },
+        get(path = "/", handler) {
+            endpoints.GET[globalPath + path.slice(1)] = handler;
+        },
+        post(path = "/", handler) {
+            endpoints.POST[globalPath + path.slice(1)] = handler;
+        },
+        put(path = "/", handler) {
+            endpoints.PUT[globalPath + path.slice(1)] = handler;
+        },
+        patch(path = "/", handler) {
+            endpoints.PATCH[globalPath + path.slice(1)] = handler;
+        },
+        delete(path = "/", handler) {
+            endpoints.DELETE[globalPath + path.slice(1)] = handler;
+        },
+        listen(port, callback) {
+            const server = http.createServer((req, res) => {
+                const url = parseUrl(req.url, port);
 
-				if (req.method === "GET") {
-					handleEndpoint("getHandlers", url.pathname, req, res);
-				}
-				if (req.method === "POST") {
-					handleEndpoint("postHandlers", url.pathname, req, res);
-				}
-				if (req.method === "PUT") {
-					handleEndpoint("putHandlers", url.pathname, req, res);
-				}
-				if (req.method === "PATCH") {
-					handleEndpoint("patchHandlers", url.pathname, req, res);
-				}
-				if (req.method === "DELETE") {
-					handleEndpoint("deleteHandlers", url.pathname, req, res);
-				}
+                req.query = getQuery(url);
 
-				res.end();
-			});
+                if (req.method === "GET") {
+                    handleEndpoint("GET", url.pathname, req, res);
+                }
+                if (req.method === "POST") {
+                    handleEndpoint("POST", url.pathname, req, res);
+                }
+                if (req.method === "PUT") {
+                    handleEndpoint("PUT", url.pathname, req, res);
+                }
+                if (req.method === "PATCH") {
+                    handleEndpoint("PATCH", url.pathname, req, res);
+                }
+                if (req.method === "DELETE") {
+                    handleEndpoint("DELETE", url.pathname, req, res);
+                }
 
-			server.listen(port);
-			callback();
-		},
-	};
+                res.end();
+            });
+
+            server.listen(port, callback);
+        },
+    };
 };
 
 const app = expression();
 
-app.use("/", (req, res, next) => {
-	console.log("use request");
-	next();
-});
-
 app.get("/", (req, res) => {
-	console.log("get request");
-	res.end();
-});
-app.post("/", (req, res) => {
-	console.log("post request");
-	res.end();
-});
-app.put("/", (req, res) => {
-	console.log("put request");
-	res.end();
-});
-app.patch("/", (req, res) => {
-	console.log("patch request");
-	res.end();
-});
-app.delete("/", (req, res) => {
-	console.log("delete request");
-	res.end();
+    console.log("get handler");
+    res.end();
 });
 
 app.listen(4000, () => {
-	console.log("Server started");
+    console.log("Server started");
 });
